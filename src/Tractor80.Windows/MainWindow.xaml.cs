@@ -10,6 +10,8 @@ namespace Tractor80.Windows;
 
 public partial class MainWindow : Window
 {
+    private const int CompletedTrickHoldMilliseconds = 6200;
+
     private enum UiLanguage
     {
         Chinese,
@@ -59,6 +61,7 @@ public partial class MainWindow : Window
         ["RushReady"] = ("有 {0} 分可抢，优先考虑拿下本墩。", "{0} points are exposed. Try to take the trick."),
         ["DefendReady"] = ("桌面有 {0} 分，尽量别让抢分方拿走。", "{0} points are exposed. Keep them away from scorers."),
         ["QuietTrick"] = ("本墩暂时没有分牌。", "No point cards in this trick yet."),
+        ["TrickReview"] = ("本墩结算中，稍后自然收牌。", "Reviewing the trick; cards will clear shortly."),
         ["ScoreFlashScorer"] = ("抢分成功 +{0}", "Captured +{0}"),
         ["ScoreFlashDefend"] = ("守住 {0} 分", "Protected {0}"),
         ["RoundScorersWin"] = ("抢分方上台：{0} 分，升 {1} 级", "Scorers take over: {0} points, +{1} level(s)"),
@@ -76,6 +79,8 @@ public partial class MainWindow : Window
     private readonly Random _random = new();
     private UiLanguage _language = UiLanguage.Chinese;
     private GameRound _round = null!;
+    private IReadOnlyList<PlayedCards>? _completedTrickSnapshot;
+    private PlayerPosition? _completedTrickWinner;
     private bool _aiRunning;
     private bool _startingHand;
 
@@ -94,6 +99,8 @@ public partial class MainWindow : Window
     {
         _startingHand = true;
         _round = GameRound.CreateNew(_random.Next(), starter: starter);
+        _completedTrickSnapshot = null;
+        _completedTrickWinner = null;
         _selectedCardIds.Clear();
         LogList.Items.Clear();
         UpdateStaticText();
@@ -222,21 +229,30 @@ public partial class MainWindow : Window
             return false;
         }
 
+        var trickCompleted = trickBefore.IsComplete;
+        var winner = trickCompleted ? trickBefore.Winner() : (PlayerPosition?)null;
+        var trickPoints = trickCompleted ? CardRules.CountPoints(trickBefore.Cards()) : 0;
+        if (trickCompleted)
+        {
+            _completedTrickSnapshot = trickBefore.Plays.ToArray();
+            _completedTrickWinner = winner;
+        }
+
         Log(Format("PlayedLog", PlayerName(player), CardsText(cards)));
         Render();
 
-        if (trickBefore.IsComplete)
+        if (trickCompleted)
         {
-            var winner = trickBefore.Winner();
-            var trickPoints = CardRules.CountPoints(trickBefore.Cards());
-            Log(Format("WonLog", PlayerName(winner)));
+            Log(Format("WonLog", PlayerName(winner!.Value)));
 
             if (trickPoints > 0)
             {
-                Log(Format("RushWonLog", PlayerName(winner), trickPoints));
-                await ShowScoreFlashAsync(winner, trickPoints);
+                Log(Format("RushWonLog", PlayerName(winner.Value), trickPoints));
+                await ShowScoreFlashAsync(winner.Value, trickPoints);
             }
 
+            await Task.Delay(CompletedTrickHoldMilliseconds);
+            await DismissCompletedTrickAsync();
             Render();
         }
 
@@ -280,13 +296,19 @@ public partial class MainWindow : Window
         WestCountText.Text = Format("Cards", _round.Hand(PlayerPosition.West).Count);
         SouthCountText.Text = Format("Cards", _round.Hand(PlayerPosition.South).Count);
 
-        var trickPoints = CardRules.CountPoints(_round.CurrentTrick.Plays.SelectMany(play => play.Cards));
+        var visiblePlays = _completedTrickSnapshot ?? _round.CurrentTrick.Plays;
+        var trickPoints = CardRules.CountPoints(visiblePlays.SelectMany(play => play.Cards));
         CurrentPotText.Text = trickPoints.ToString(CultureInfo.CurrentCulture);
         ScoreProgress.Value = Math.Min(80, _round.OpponentTrickPoints);
         ScoreTeamText.Text = Format("ScoringSide", TeamName(_round.Opponents));
         RushStateText.Text = RushStateTextFor(trickPoints);
 
-        if (_round.Phase == RoundPhase.Complete)
+        if (_completedTrickSnapshot is not null)
+        {
+            MessageText.Text = Text("TrickReview");
+            PlayButton.Content = Text("Play");
+        }
+        else if (_round.Phase == RoundPhase.Complete)
         {
             MessageText.Text = ResultText();
             PlayButton.Content = Text("NewHand");
@@ -323,20 +345,28 @@ public partial class MainWindow : Window
     private void RenderTrick()
     {
         CurrentTrickPanel.Children.Clear();
-        foreach (var play in _round.CurrentTrick.Plays)
+        var plays = _completedTrickSnapshot ?? _round.CurrentTrick.Plays;
+
+        foreach (var play in plays)
         {
+            var isWinner = _completedTrickWinner == play.Player;
             var panel = new Border
             {
-                Margin = new Thickness(8),
-                Padding = new Thickness(10),
-                Background = new SolidColorBrush(Color.FromArgb(220, 20, 55, 45)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(57, 123, 101)),
-                BorderThickness = new Thickness(1),
+                Margin = new Thickness(7),
+                Padding = new Thickness(8),
+                Background = new SolidColorBrush(Color.FromArgb(224, 20, 55, 45)),
+                BorderBrush = isWinner
+                    ? new SolidColorBrush(Color.FromRgb(238, 204, 111))
+                    : new SolidColorBrush(Color.FromRgb(57, 123, 101)),
+                BorderThickness = isWinner ? new Thickness(2) : new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Effect = TryFindResource("PanelShadow") as System.Windows.Media.Effects.Effect,
                 Opacity = 0,
                 RenderTransformOrigin = new Point(0.5, 0.5),
-                RenderTransform = new ScaleTransform(0.92, 0.92)
+                RenderTransform = new ScaleTransform(0.94, 0.94),
+                HorizontalAlignment = TrickHorizontalAlignment(play.Player),
+                VerticalAlignment = TrickVerticalAlignment(play.Player),
+                MaxWidth = play.Player is PlayerPosition.East or PlayerPosition.West ? 246 : 420
             };
 
             var cards = new StackPanel
@@ -367,8 +397,72 @@ public partial class MainWindow : Window
             };
 
             CurrentTrickPanel.Children.Add(panel);
+            Grid.SetRow(panel, TrickGridRow(play.Player));
+            Grid.SetColumn(panel, TrickGridColumn(play.Player));
             FadeIn(panel);
         }
+    }
+
+    private async Task DismissCompletedTrickAsync()
+    {
+        if (_completedTrickSnapshot is null)
+        {
+            return;
+        }
+
+        foreach (UIElement child in CurrentTrickPanel.Children)
+        {
+            child.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(520))
+            {
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseIn }
+            });
+        }
+
+        await Task.Delay(540);
+        _completedTrickSnapshot = null;
+        _completedTrickWinner = null;
+    }
+
+    private static int TrickGridRow(PlayerPosition player)
+    {
+        return player switch
+        {
+            PlayerPosition.North => 0,
+            PlayerPosition.West or PlayerPosition.East => 1,
+            PlayerPosition.South => 2,
+            _ => 1
+        };
+    }
+
+    private static int TrickGridColumn(PlayerPosition player)
+    {
+        return player switch
+        {
+            PlayerPosition.West => 0,
+            PlayerPosition.North or PlayerPosition.South => 1,
+            PlayerPosition.East => 2,
+            _ => 1
+        };
+    }
+
+    private static HorizontalAlignment TrickHorizontalAlignment(PlayerPosition player)
+    {
+        return player switch
+        {
+            PlayerPosition.West => HorizontalAlignment.Left,
+            PlayerPosition.East => HorizontalAlignment.Right,
+            _ => HorizontalAlignment.Center
+        };
+    }
+
+    private static VerticalAlignment TrickVerticalAlignment(PlayerPosition player)
+    {
+        return player switch
+        {
+            PlayerPosition.North => VerticalAlignment.Top,
+            PlayerPosition.South => VerticalAlignment.Bottom,
+            _ => VerticalAlignment.Center
+        };
     }
 
     private void RenderHand()
@@ -412,8 +506,8 @@ public partial class MainWindow : Window
 
     private Border CreateCardFace(Card card, bool selected, bool compact)
     {
-        var width = compact ? 44 : 64;
-        var height = compact ? 62 : 92;
+        var width = compact ? 56 : 64;
+        var height = compact ? 78 : 92;
         var isRed = card.Joker == JokerColor.Red || card.Suit is Suit.Hearts or Suit.Diamonds;
         var foreground = isRed
             ? new SolidColorBrush(Color.FromRgb(177, 42, 54))
@@ -436,7 +530,7 @@ public partial class MainWindow : Window
         {
             Text = rank,
             Foreground = foreground,
-            FontSize = compact ? 14 : rank.Length > 1 ? 17 : 21,
+            FontSize = compact ? rank.Length > 1 ? 15 : 18 : rank.Length > 1 ? 17 : 21,
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(5, 2, 5, 0),
             HorizontalAlignment = HorizontalAlignment.Left
@@ -446,7 +540,7 @@ public partial class MainWindow : Window
         {
             Text = suit,
             Foreground = foreground,
-            FontSize = card.IsJoker ? compact ? 9 : 11 : compact ? 20 : 28,
+            FontSize = card.IsJoker ? compact ? 10 : 11 : compact ? 26 : 28,
             FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
@@ -467,7 +561,7 @@ public partial class MainWindow : Window
                 {
                     Text = $"+{card.PointValue}",
                     Foreground = new SolidColorBrush(Color.FromRgb(20, 30, 27)),
-                    FontSize = compact ? 9 : 11,
+                    FontSize = compact ? 10 : 11,
                     FontWeight = FontWeights.Bold
                 }
             };
@@ -619,6 +713,8 @@ public partial class MainWindow : Window
     private bool CanHumanPlay()
     {
         return !_startingHand
+            && !_aiRunning
+            && _completedTrickSnapshot is null
             && _round.Phase == RoundPhase.Playing
             && _round.CurrentTrick.ExpectedPlayer == PlayerPosition.South;
     }

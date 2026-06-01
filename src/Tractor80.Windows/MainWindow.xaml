@@ -11,20 +11,20 @@
         MinHeight="740"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource TableBackgroundBrush}">
-    <Grid x:Name="RootGrid" Margin="18">
+    <Grid x:Name="RootGrid" Margin="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="218" />
+            <RowDefinition Height="194" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3.1*" />
-            <ColumnDefinition Width="1.08*" />
+            <ColumnDefinition Width="3.8*" />
+            <ColumnDefinition Width="0.92*" />
         </Grid.ColumnDefinitions>
 
         <Border Grid.Row="0"
                 Grid.ColumnSpan="2"
-                Padding="18,14"
+                Padding="16,12"
                 Background="#D910231D"
                 BorderBrush="#2B614F"
                 BorderThickness="1"
@@ -54,7 +54,7 @@
                 <StackPanel>
                     <TextBlock x:Name="TitleText"
                                Foreground="{StaticResource TextBrush}"
-                               FontSize="30"
+                               FontSize="26"
                                FontWeight="Bold" />
                     <WrapPanel Margin="0,8,0,0">
                         <TextBlock x:Name="TrumpText"
@@ -80,23 +80,23 @@
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="1" Grid.Column="0" Margin="0,14,14,14">
+        <Grid Grid.Row="1" Grid.Column="0" Margin="0,10,10,10">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="178" />
+                <ColumnDefinition Width="118" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="178" />
+                <ColumnDefinition Width="118" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="116" />
+                <RowDefinition Height="74" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="112" />
+                <RowDefinition Height="76" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
                     Grid.Column="1"
                     x:Name="NorthSeat"
-                    Margin="10,0"
-                    Padding="14"
+                    Margin="8,0"
+                    Padding="8"
                     Background="#D910231D"
                     BorderBrush="#2B614F"
                     BorderThickness="1"
@@ -105,12 +105,12 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock x:Name="NorthNameText"
                                Foreground="{StaticResource TextBrush}"
-                               FontSize="18"
+                               FontSize="15"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                     <TextBlock x:Name="NorthCountText"
                                Foreground="{StaticResource MutedTextBrush}"
-                               FontSize="14"
+                               FontSize="12"
                                HorizontalAlignment="Center"
                                Margin="0,5,0,0" />
                 </StackPanel>
@@ -119,7 +119,7 @@
             <Border Grid.Row="1"
                     Grid.Column="0"
                     x:Name="WestSeat"
-                    Padding="14"
+                    Padding="8"
                     Background="#D910231D"
                     BorderBrush="#2B614F"
                     BorderThickness="1"
@@ -128,12 +128,12 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock x:Name="WestNameText"
                                Foreground="{StaticResource TextBrush}"
-                               FontSize="18"
+                               FontSize="15"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                     <TextBlock x:Name="WestCountText"
                                Foreground="{StaticResource MutedTextBrush}"
-                               FontSize="14"
+                               FontSize="12"
                                HorizontalAlignment="Center"
                                Margin="0,5,0,0" />
                 </StackPanel>
@@ -142,23 +142,23 @@
             <Border Grid.Row="1"
                     Grid.Column="1"
                     x:Name="TableBorder"
-                    Margin="12"
-                    Padding="20"
+                    Margin="6"
+                    Padding="10"
                     Background="#D80B211A"
                     BorderBrush="#3A8468"
                     BorderThickness="1.4"
                     CornerRadius="8"
                     Effect="{StaticResource PanelShadow}">
                 <Grid>
-                    <Ellipse Width="580"
-                             Height="372"
+                    <Ellipse Width="820"
+                             Height="500"
                              HorizontalAlignment="Center"
                              VerticalAlignment="Center"
                              Fill="#13342B"
                              Stroke="#3D866D"
                              StrokeThickness="2" />
-                    <Ellipse Width="450"
-                             Height="276"
+                    <Ellipse Width="650"
+                             Height="386"
                              HorizontalAlignment="Center"
                              VerticalAlignment="Center"
                              Fill="#102A23"
@@ -166,24 +166,32 @@
                              StrokeThickness="1" />
                     <StackPanel HorizontalAlignment="Center"
                                 VerticalAlignment="Top"
-                                Margin="0,18,0,0">
+                                Margin="0,12,0,0">
                         <TextBlock x:Name="PotTitleText"
                                    Foreground="{StaticResource MutedTextBrush}"
-                                   FontSize="13"
+                                   FontSize="12"
                                    HorizontalAlignment="Center" />
                         <TextBlock x:Name="CurrentPotText"
                                    Foreground="{StaticResource GoldBrush}"
-                                   FontSize="28"
+                                   FontSize="24"
                                    FontWeight="Bold"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
-                    <UniformGrid x:Name="CurrentTrickPanel"
-                                 Rows="2"
-                                 Columns="2"
-                                 Width="560"
-                                 Height="340"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center" />
+                    <Grid x:Name="CurrentTrickPanel"
+                          Margin="34,54,34,44"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="1.15*" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.05*" />
+                            <ColumnDefinition Width="1.7*" />
+                            <ColumnDefinition Width="1.05*" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
                     <TextBlock x:Name="MessageText"
                                Foreground="{StaticResource GoldBrush}"
                                FontSize="16"
@@ -199,7 +207,7 @@
             <Border Grid.Row="1"
                     Grid.Column="2"
                     x:Name="EastSeat"
-                    Padding="14"
+                    Padding="8"
                     Background="#D910231D"
                     BorderBrush="#2B614F"
                     BorderThickness="1"
@@ -208,12 +216,12 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock x:Name="EastNameText"
                                Foreground="{StaticResource TextBrush}"
-                               FontSize="18"
+                               FontSize="15"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                     <TextBlock x:Name="EastCountText"
                                Foreground="{StaticResource MutedTextBrush}"
-                               FontSize="14"
+                               FontSize="12"
                                HorizontalAlignment="Center"
                                Margin="0,5,0,0" />
                 </StackPanel>
@@ -222,8 +230,8 @@
             <Border Grid.Row="2"
                     Grid.Column="1"
                     x:Name="SouthSeat"
-                    Margin="10,0"
-                    Padding="14"
+                    Margin="8,0"
+                    Padding="8"
                     Background="#D910231D"
                     BorderBrush="#2B614F"
                     BorderThickness="1"
@@ -232,19 +240,19 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock x:Name="SouthNameText"
                                Foreground="{StaticResource TextBrush}"
-                               FontSize="18"
+                               FontSize="15"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                     <TextBlock x:Name="SouthCountText"
                                Foreground="{StaticResource MutedTextBrush}"
-                               FontSize="14"
+                               FontSize="12"
                                HorizontalAlignment="Center"
                                Margin="0,5,0,0" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <Grid Grid.Row="1" Grid.Column="1" Margin="0,14,0,14">
+        <Grid Grid.Row="1" Grid.Column="1" Margin="0,10,0,10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -282,7 +290,7 @@
             </Border>
 
             <Border Grid.Row="1"
-                    Margin="0,14,0,0"
+                    Margin="0,10,0,0"
                     Padding="14"
                     Background="#D910231D"
                     BorderBrush="#2B614F"
@@ -301,11 +309,8 @@
                                Margin="0,0,0,10" />
                     <ListBox x:Name="LogList"
                              Grid.Row="1"
-                             Background="#9910221D"
-                             BorderThickness="0"
-                             Foreground="{StaticResource MutedTextBrush}"
-                             FontSize="13"
-                             Padding="8" />
+                             Style="{StaticResource ModernLogListStyle}"
+                             FontSize="13" />
                 </Grid>
             </Border>
         </Grid>

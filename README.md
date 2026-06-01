@@ -99,3 +99,4 @@ WPF still emits a few native runtime support DLLs next to the exe; ship the whol
 - `artifacts`: generated coverage and playable publish output.
 
 More details are in `docs\architecture.md` and `docs\build-package-ci.md`.
+AI strategy details are in `docs\ai-strategy.md`.
