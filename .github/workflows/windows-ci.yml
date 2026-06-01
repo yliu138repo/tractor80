@@ -1,0 +1,45 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-test-package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore Tractor80.sln
+
+      - name: Build
+        run: dotnet build Tractor80.sln --configuration Release --no-restore
+
+      - name: Test with coverage
+        shell: pwsh
+        run: ./eng/test.ps1 -Configuration Release -MinimumLineCoverage 90
+
+      - name: Add coverage summary
+        shell: pwsh
+        run: Get-Content artifacts/coverage-summary.md >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Publish self-contained Windows build
+        shell: pwsh
+        run: ./eng/publish-win.ps1 -Configuration Release -Runtime win-x64
+
+      - name: Upload playable exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tractor80-win-x64
+          path: artifacts/publish/win-x64/**
