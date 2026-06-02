@@ -61,7 +61,7 @@ public partial class MainWindow : Window
         ["RushReady"] = ("有 {0} 分可抢，优先考虑拿下本墩。", "{0} points are exposed. Try to take the trick."),
         ["DefendReady"] = ("桌面有 {0} 分，尽量别让抢分方拿走。", "{0} points are exposed. Keep them away from scorers."),
         ["QuietTrick"] = ("本墩暂时没有分牌。", "No point cards in this trick yet."),
-        ["TrickReview"] = ("本墩结算中，稍后自然收牌。", "Reviewing the trick; cards will clear shortly."),
+        ["TrickReview"] = ("本墩结算中，点击桌面可收牌，或稍后自然收牌。", "Reviewing the trick; click the table to collect, or wait for auto-clear."),
         ["ScoreFlashScorer"] = ("抢分成功 +{0}", "Captured +{0}"),
         ["ScoreFlashDefend"] = ("守住 {0} 分", "Protected {0}"),
         ["RoundScorersWin"] = ("抢分方上台：{0} 分，升 {1} 级", "Scorers take over: {0} points, +{1} level(s)"),
@@ -81,6 +81,7 @@ public partial class MainWindow : Window
     private GameRound _round = null!;
     private IReadOnlyList<PlayedCards>? _completedTrickSnapshot;
     private PlayerPosition? _completedTrickWinner;
+    private TaskCompletionSource<bool>? _dismissRequested;
     private bool _aiRunning;
     private bool _startingHand;
 
@@ -101,6 +102,7 @@ public partial class MainWindow : Window
         _round = GameRound.CreateNew(_random.Next(), starter: starter);
         _completedTrickSnapshot = null;
         _completedTrickWinner = null;
+        _dismissRequested = null;
         _selectedCardIds.Clear();
         LogList.Items.Clear();
         UpdateStaticText();
@@ -236,6 +238,7 @@ public partial class MainWindow : Window
         {
             _completedTrickSnapshot = trickBefore.Plays.ToArray();
             _completedTrickWinner = winner;
+            _dismissRequested = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         Log(Format("PlayedLog", PlayerName(player), CardsText(cards)));
@@ -251,12 +254,31 @@ public partial class MainWindow : Window
                 await ShowScoreFlashAsync(winner.Value, trickPoints);
             }
 
-            await Task.Delay(CompletedTrickHoldMilliseconds);
+            await Task.WhenAny(
+                Task.Delay(CompletedTrickHoldMilliseconds),
+                _dismissRequested?.Task ?? Task.CompletedTask);
             await DismissCompletedTrickAsync();
             Render();
         }
 
         return true;
+    }
+
+    private void TableBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_completedTrickSnapshot is null)
+        {
+            return;
+        }
+
+        _dismissRequested?.TrySetResult(true);
+        e.Handled = true;
+    }
+
+    private void HandScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        HandScrollViewer.ScrollToHorizontalOffset(HandScrollViewer.HorizontalOffset - e.Delta);
+        e.Handled = true;
     }
 
     private void SelectSuggestedPlay(AiPersona persona, string messageFormat)
@@ -302,6 +324,7 @@ public partial class MainWindow : Window
         ScoreProgress.Value = Math.Min(80, _round.OpponentTrickPoints);
         ScoreTeamText.Text = Format("ScoringSide", TeamName(_round.Opponents));
         RushStateText.Text = RushStateTextFor(trickPoints);
+        TableBorder.Cursor = _completedTrickSnapshot is null ? Cursors.Arrow : Cursors.Hand;
 
         if (_completedTrickSnapshot is not null)
         {
@@ -366,7 +389,7 @@ public partial class MainWindow : Window
                 RenderTransform = new ScaleTransform(0.94, 0.94),
                 HorizontalAlignment = TrickHorizontalAlignment(play.Player),
                 VerticalAlignment = TrickVerticalAlignment(play.Player),
-                MaxWidth = play.Player is PlayerPosition.East or PlayerPosition.West ? 246 : 420
+                MaxWidth = play.Player is PlayerPosition.East or PlayerPosition.West ? 250 : 470
             };
 
             var cards = new StackPanel
@@ -381,6 +404,15 @@ public partial class MainWindow : Window
                 cards.Children.Add(CreateCardFace(card, selected: false, compact: true));
             }
 
+            var cardsView = new Viewbox
+            {
+                Stretch = Stretch.Uniform,
+                StretchDirection = StretchDirection.DownOnly,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                MaxHeight = 56,
+                Child = cards
+            };
+
             panel.Child = new StackPanel
             {
                 Children =
@@ -392,7 +424,7 @@ public partial class MainWindow : Window
                         FontWeight = FontWeights.SemiBold,
                         HorizontalAlignment = HorizontalAlignment.Center
                     },
-                    cards
+                    cardsView
                 }
             };
 
@@ -421,6 +453,7 @@ public partial class MainWindow : Window
         await Task.Delay(540);
         _completedTrickSnapshot = null;
         _completedTrickWinner = null;
+        _dismissRequested = null;
     }
 
     private static int TrickGridRow(PlayerPosition player)
@@ -474,9 +507,9 @@ public partial class MainWindow : Window
             var button = new Button
             {
                 Tag = card,
-                Width = 68,
-                Height = 98,
-                Margin = new Thickness(5),
+                Width = 62,
+                Height = 88,
+                Margin = new Thickness(3),
                 Style = (Style)FindResource("FlatCardButtonStyle"),
                 Content = CreateCardFace(card, selected, compact: false),
                 RenderTransform = new TranslateTransform(0, selected ? -12 : 0)
@@ -506,8 +539,8 @@ public partial class MainWindow : Window
 
     private Border CreateCardFace(Card card, bool selected, bool compact)
     {
-        var width = compact ? 56 : 64;
-        var height = compact ? 78 : 92;
+        var width = compact ? 42 : 56;
+        var height = compact ? 58 : 80;
         var isRed = card.Joker == JokerColor.Red || card.Suit is Suit.Hearts or Suit.Diamonds;
         var foreground = isRed
             ? new SolidColorBrush(Color.FromRgb(177, 42, 54))
@@ -530,7 +563,7 @@ public partial class MainWindow : Window
         {
             Text = rank,
             Foreground = foreground,
-            FontSize = compact ? rank.Length > 1 ? 15 : 18 : rank.Length > 1 ? 17 : 21,
+            FontSize = compact ? rank.Length > 1 ? 11 : 14 : rank.Length > 1 ? 15 : 19,
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(5, 2, 5, 0),
             HorizontalAlignment = HorizontalAlignment.Left
@@ -540,7 +573,7 @@ public partial class MainWindow : Window
         {
             Text = suit,
             Foreground = foreground,
-            FontSize = card.IsJoker ? compact ? 10 : 11 : compact ? 26 : 28,
+            FontSize = card.IsJoker ? compact ? 8 : 10 : compact ? 19 : 24,
             FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
@@ -561,7 +594,7 @@ public partial class MainWindow : Window
                 {
                     Text = $"+{card.PointValue}",
                     Foreground = new SolidColorBrush(Color.FromRgb(20, 30, 27)),
-                    FontSize = compact ? 10 : 11,
+                    FontSize = compact ? 8 : 11,
                     FontWeight = FontWeights.Bold
                 }
             };

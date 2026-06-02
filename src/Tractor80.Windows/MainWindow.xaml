@@ -148,7 +148,8 @@
                     BorderBrush="#3A8468"
                     BorderThickness="1.4"
                     CornerRadius="8"
-                    Effect="{StaticResource PanelShadow}">
+                    Effect="{StaticResource PanelShadow}"
+                    MouseLeftButtonUp="TableBorder_MouseLeftButtonUp">
                 <Grid>
                     <Ellipse Width="820"
                              Height="500"
@@ -339,10 +340,12 @@
                                HorizontalAlignment="Right"
                                DockPanel.Dock="Right" />
                 </DockPanel>
-                <ScrollViewer Grid.Row="1"
-                              HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                    <WrapPanel x:Name="HumanHandPanel" />
+                <ScrollViewer x:Name="HandScrollViewer"
+                              Grid.Row="1"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled"
+                              PreviewMouseWheel="HandScrollViewer_PreviewMouseWheel">
+                    <StackPanel x:Name="HumanHandPanel" Orientation="Horizontal" />
                 </ScrollViewer>
             </Grid>
         </Border>
